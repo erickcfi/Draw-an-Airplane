@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Draw an Airplane — CFI Training Aid</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --sky: #0a1628;
+      --sky-mid: #0d2347;
+      --blue: #1565c0;
+      --blue-light: #1e88e5;
+      --accent: #ffc107;
+      --accent-dim: #e6a800;
+      --white: #f0f4ff;
+      --gray: #8eacd0;
+      --panel: rgba(255,255,255,0.06);
+      --panel-border: rgba(255,255,255,0.12);
+      --radius: 12px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.4);
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(160deg, var(--sky) 0%, var(--sky-mid) 100%);
+      color: var(--white);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px;
+      gap: 16px;
+    }
+
+    header {
+      text-align: center;
+      padding: 8px 0 4px;
+    }
+    header h1 {
+      font-size: clamp(1.2rem, 3vw, 1.8rem);
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+    }
+    header p {
+      font-size: 0.8rem;
+      color: var(--gray);
+      margin-top: 2px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    /* ── TAB BAR ── */
+    .tabs {
+      display: flex;
+      gap: 6px;
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: 50px;
+      padding: 4px;
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--gray);
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 6px 18px;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+    .tab-btn:hover { color: var(--white); }
+    .tab-btn.active { background: var(--accent); color: #1a0f00; }
+
+    /* ── PANELS ── */
+    .panel { display: none; width: 100%; max-width: 900px; }
+    .panel.active { display: flex; flex-direction: column; gap: 14px; }
+
+    /* ── TUTORIAL ── */
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .step-badge {
+      background: var(--accent);
+      color: #1a0f00;
+      font-weight: 800;
+      font-size: 0.72rem;
+      padding: 4px 12px;
+      border-radius: 50px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .step-title {
+      font-size: clamp(1rem, 2.5vw, 1.3rem);
+      font-weight: 700;
+      color: var(--white);
+    }
+    .step-nav {
+      display: flex;
+      gap: 8px;
+      margin-left: auto;
+    }
+    .nav-btn {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      color: var(--white);
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 7px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .nav-btn:hover:not(:disabled) { background: var(--blue-light); border-color: var(--blue-light); }
+    .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .nav-btn.primary { background: var(--blue-light); border-color: var(--blue-light); }
+    .nav-btn.primary:hover { background: var(--blue); border-color: var(--blue); }
+
+    .tutorial-body {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    @media (min-width: 640px) {
+      .tutorial-body { grid-template-columns: 1fr 1fr; }
+    }
+
+    .canvas-card {
+      background: #fff;
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      position: relative;
+      aspect-ratio: 4/3;
+    }
+    .canvas-card canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* progress dots */
+    .step-dots {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--panel-border);
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+    .dot.done { background: var(--blue-light); }
+    .dot.active { background: var(--accent); transform: scale(1.3); }
+
+    .instructions-card {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .instructions-card h3 {
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 700;
+    }
+    .instruction-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .instruction-list li {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      font-size: 0.88rem;
+      line-height: 1.5;
+      color: var(--white);
+    }
+    .instruction-list li::before {
+      content: attr(data-num);
+      background: var(--blue-light);
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 700;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .whiteboard-tip {
+      background: rgba(255,193,7,0.1);
+      border: 1px solid rgba(255,193,7,0.3);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.8rem;
+      color: var(--accent);
+      line-height: 1.5;
+    }
+    .whiteboard-tip strong { display: block; margin-bottom: 2px; }
+
+    /* animate button */
+    .anim-btn {
+      background: var(--accent);
+      color: #1a0f00;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      padding: 9px 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.04em;
+      align-self: flex-start;
+    }
+    .anim-btn:hover { background: var(--accent-dim); }
+
+    /* ── PRACTICE ── */
+    .practice-toolbar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .tool-group {
+      display: flex;
+      gap: 4px;
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 4px;
+    }
+    .tool-btn {
+      background: none;
+      border: none;
+      color: var(--gray);
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .tool-btn:hover { color: var(--white); background: rgba(255,255,255,0.08); }
+    .tool-btn.active { background: var(--blue-light); color: #fff; }
+    .tool-btn.danger:hover { background: rgba(255,80,80,0.2); color: #ff6b6b; }
+
+    .size-slider {
+      accent-color: var(--accent);
+      width: 80px;
+    }
+    .color-swatch {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 3px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .color-swatch.active { border-color: var(--white); transform: scale(1.15); }
+
+    .practice-canvas-wrap {
+      background: #fff;
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      cursor: crosshair;
+      position: relative;
+      aspect-ratio: 16/9;
+    }
+    .practice-canvas-wrap canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+    }
+    .ghost-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      transition: opacity 0.4s;
+    }
+
+    .practice-hints {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+    }
+    .hint-card {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 0.78rem;
+      line-height: 1.5;
+    }
+    .hint-card strong { color: var(--accent); display: block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 3px; }
+
+    /* ── REFERENCE ── */
+    .ref-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+    }
+    .ref-card {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .ref-card canvas { width: 100%; display: block; background: #fff; }
+    .ref-card .ref-label {
+      padding: 10px 14px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 0.04em;
+    }
+    .ref-card .ref-desc {
+      padding: 0 14px 12px;
+      font-size: 0.75rem;
+      color: var(--gray);
+      line-height: 1.5;
+    }
+
+    /* scroll helper */
+    .scroll-x { overflow-x: auto; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 500px) {
+      body { padding: 10px; }
+      .step-nav .nav-btn span { display: none; }
+      .nav-btn { padding: 7px 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>✈ Draw an Airplane</h1>
+  <p>CFI Visual Aid Training Tool</p>
+</header>
+
+<nav class="tabs">
+  <button class="tab-btn active" data-tab="tutorial">Step-by-Step</button>
+  <button class="tab-btn" data-tab="practice">Practice Board</button>
+  <button class="tab-btn" data-tab="reference">Quick Reference</button>
+</nav>
+
+<!-- ══════════ TUTORIAL PANEL ══════════ -->
+<div id="tab-tutorial" class="panel active">
+  <div class="step-header">
+    <div class="step-badge" id="step-badge">Step 1 of 7</div>
+    <div class="step-title" id="step-title">The Fuselage</div>
+    <div class="step-nav">
+      <button class="nav-btn" id="prev-btn" disabled>&#8592; <span>Prev</span></button>
+      <button class="nav-btn primary" id="next-btn">Next <span>&#8594;</span></button>
+    </div>
+  </div>
+
+  <div class="step-dots" id="step-dots"></div>
+
+  <div class="tutorial-body">
+    <div class="canvas-card">
+      <canvas id="tutorial-canvas" width="600" height="450"></canvas>
+    </div>
+    <div class="instructions-card">
+      <h3>Whiteboard Instructions</h3>
+      <ul class="instruction-list" id="instruction-list"></ul>
+      <div class="whiteboard-tip" id="whiteboard-tip"></div>
+      <button class="anim-btn" id="replay-btn">&#9654; Replay Animation</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PRACTICE PANEL ══════════ -->
+<div id="tab-practice" class="panel">
+  <div class="practice-toolbar">
+    <div class="tool-group">
+      <button class="tool-btn active" id="tool-pen" title="Pen">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        Draw
+      </button>
+      <button class="tool-btn" id="tool-eraser" title="Eraser">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m20 20-7-7"/><path d="M6.5 6.5 4 9l7 7 7-7-2.5-2.5"/><path d="M4 20h16"/></svg>
+        Erase
+      </button>
+    </div>
+    <div class="tool-group">
+      <span style="font-size:0.75rem;color:var(--gray);padding:0 6px;align-self:center">Size</span>
+      <input type="range" class="size-slider" id="brush-size" min="1" max="20" value="3">
+    </div>
+    <div class="tool-group" style="gap:6px;padding:6px 10px;">
+      <div class="color-swatch active" data-color="#1a1a1a" style="background:#1a1a1a"></div>
+      <div class="color-swatch" data-color="#1565c0" style="background:#1565c0"></div>
+      <div class="color-swatch" data-color="#c62828" style="background:#c62828"></div>
+      <div class="color-swatch" data-color="#2e7d32" style="background:#2e7d32"></div>
+      <div class="color-swatch" data-color="#e65100" style="background:#e65100"></div>
+    </div>
+    <div class="tool-group" style="margin-left:auto">
+      <button class="tool-btn" id="toggle-ghost" title="Toggle reference ghost">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Ghost
+      </button>
+      <button class="tool-btn danger" id="clear-canvas">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+        Clear
+      </button>
+    </div>
+  </div>
+
+  <div class="practice-canvas-wrap" id="practice-wrap">
+    <canvas id="practice-canvas" width="1200" height="675"></canvas>
+    <canvas id="ghost-canvas" class="ghost-overlay" width="1200" height="675" style="opacity:0.18"></canvas>
+  </div>
+
+  <div class="practice-hints">
+    <div class="hint-card"><strong>Fuselage</strong>Draw a long, slightly tapered horizontal tube — wider at the front, narrower toward the tail.</div>
+    <div class="hint-card"><strong>Wings</strong>Start at the lower-mid fuselage. Sweep back and taper to a point. Mirror on both sides.</div>
+    <div class="hint-card"><strong>Horizontal Stab</strong>Smaller wings at the tail. Same sweep angle as the main wing, just smaller.</div>
+    <div class="hint-card"><strong>Vertical Fin</strong>Triangle above the tail — taller than wide, sweeping forward at the top.</div>
+    <div class="hint-card"><strong>Cockpit</strong>A curved bump near the front-top of the fuselage with a few window lines.</div>
+    <div class="hint-card"><strong>Engine</strong>Round circle on the wing (or nose for a prop plane). Add a few thrust-line chevrons.</div>
+  </div>
+</div>
+
+<!-- ══════════ REFERENCE PANEL ══════════ -->
+<div id="tab-reference" class="panel">
+  <div class="ref-grid" id="ref-grid"></div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   AIRPLANE DRAWING LIBRARY
+   All coordinates are normalized 0-1, scaled to canvas.
+═══════════════════════════════════════════════════════ */
+
+// Each step describes what to draw cumulatively up to that point,
+// plus what's NEW this step (for animation highlight).
+const STEPS = [
+  {
+    id: 0,
+    title: "The Fuselage",
+    instructions: [
+      "Draw a long, gently tapered horizontal oval — wider at the front, narrowing slightly toward the tail.",
+      "Think of it as a stretched football or a cigar shape lying on its side.",
+      "This is the backbone of your airplane. Everything else attaches here."
+    ],
+    tip: "Whiteboard tip: Use a single fluid sweeping motion for each curve. Practice the top arc, then the bottom arc separately before connecting them.",
+    animate: drawFuselage,
+    color: "#1a1a1a",
+    highlightColor: "#c62828"
+  },
+  {
+    id: 1,
+    title: "Main Wings",
+    instructions: [
+      "Find the midpoint of the fuselage — your wings attach roughly 40% back from the nose.",
+      "Draw a swept-back shape that starts wide at the fuselage and tapers to a point.",
+      "The leading edge (front) sweeps back at ~30°. The trailing edge is more perpendicular.",
+      "Draw both wings — they should be symmetric like a mirror image."
+    ],
+    tip: "Whiteboard tip: Draw the far wing first (it's partially hidden), then the near wing overlapping the fuselage. Use a ruler guide if needed for equal sweep angles.",
+    animate: drawWings,
+    color: "#1565c0",
+    highlightColor: "#1565c0"
+  },
+  {
+    id: 2,
+    title: "Horizontal Stabilizer",
+    instructions: [
+      "At the tail end of the fuselage, add smaller 'mini-wings' — the horizontal stabilizer.",
+      "These are typically 25–30% the span of the main wings.",
+      "Same swept-back shape, but much smaller and positioned at the very rear."
+    ],
+    tip: "Whiteboard tip: The horizontal stabilizer helps show students what creates pitch control. Draw an arrow toward it labeled 'ELEVATOR' for teaching moments.",
+    animate: drawHStab,
+    color: "#2e7d32",
+    highlightColor: "#2e7d32"
+  },
+  {
+    id: 3,
+    title: "Vertical Stabilizer (Tail Fin)",
+    instructions: [
+      "Add a tall triangle rising from the top of the tail — the vertical fin.",
+      "It sweeps forward at the top and stands roughly as tall as the fuselage is wide.",
+      "The rudder is the rear portion of this fin (you can add a dividing line)."
+    ],
+    tip: "Whiteboard tip: Label 'RUDDER' on the rear section and draw a curved arrow to show yaw direction. This is a great teaching moment for the three axes of flight.",
+    animate: drawVFin,
+    color: "#6a1b9a",
+    highlightColor: "#6a1b9a"
+  },
+  {
+    id: 4,
+    title: "Cockpit & Windows",
+    instructions: [
+      "Draw a raised bubble shape near the front-top of the fuselage — the cockpit.",
+      "Add 2–3 rectangular windows (slightly tilted) to show the windshield.",
+      "A small curved line separates the cockpit glass from the fuselage."
+    ],
+    tip: "Whiteboard tip: Keeping the cockpit proportionally small is key. Many beginners draw it too big. It should occupy roughly 15% of the fuselage length.",
+    animate: drawCockpit,
+    color: "#e65100",
+    highlightColor: "#e65100"
+  },
+  {
+    id: 5,
+    title: "Engines",
+    instructions: [
+      "For a commercial jet: draw an oval/teardrop shape hanging below the wing, slightly forward of the leading edge.",
+      "Add a circular inlet at the front and a slightly smaller exhaust at the rear.",
+      "Optionally add a pylon (short strut) connecting the engine to the wing."
+    ],
+    tip: "Whiteboard tip: When teaching engine-out procedures, having the engine clearly marked helps students visualize thrust asymmetry. Label 'N1', 'N2' for turbine stages if discussing engine failures.",
+    animate: drawEngines,
+    color: "#37474f",
+    highlightColor: "#37474f"
+  },
+  {
+    id: 6,
+    title: "Landing Gear & Final Details",
+    instructions: [
+      "Add two main gear legs dropping from below the wings — each a simple vertical line ending in a small oval wheel.",
+      "Add a smaller nose gear below the cockpit area.",
+      "Optional: add navigation light dots (red left wing, green right wing, white tail)."
+    ],
+    tip: "Whiteboard tip: For teaching gear-up emergencies or normal procedures, this is the clearest visual. Mark the gear-up condition by erasing the legs and adding a flat belly line.",
+    animate: drawGear,
+    color: "#795548",
+    highlightColor: "#795548"
+  }
+];
+
+/* ─── Drawing primitives (0–1 coord space → canvas px) ─── */
+
+function s(v, dim) { return v * dim; } // scale helper
+
+function drawFuselage(ctx, w, h, col) {
+  ctx.strokeStyle = col;
+  ctx.lineWidth = Math.max(2, w * 0.005);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  // Main fuselage body
+  ctx.beginPath();
+  ctx.ellipse(s(0.48, w), s(0.5, h), s(0.38, w), s(0.075, h), 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Nose cone (pointed front)
+  ctx.beginPath();
+  ctx.moveTo(s(0.86, w), s(0.5, h));
+  ctx.bezierCurveTo(s(0.93, w), s(0.47, h), s(0.96, w), s(0.49, h), s(0.96, w), s(0.5, h));
+  ctx.bezierCurveTo(s(0.96, w), s(0.51, h), s(0.93, w), s(0.53, h), s(0.86, w), s(0.5, h));
+  ctx.fill();
+  ctx.stroke();
+}
+
+function drawWings(ctx, w, h, col) {
+  ctx.strokeStyle = col;
+  ctx.fillStyle = col + "22";
+  ctx.lineWidth = Math.max(2, w * 0.004);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  // Top (far) wing
+  ctx.beginPath();
+  ctx.moveTo(s(0.52, w), s(0.44, h));
+  ctx.lineTo(s(0.20, w), s(0.27, h));
+  ctx.lineTo(s(0.18, w), s(0.30, h));
+  ctx.lineTo(s(0.46, w), s(0.46, h));
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Bottom (near) wing
+  ctx.beginPath();
+  ctx.moveTo(s(0.52, w), s(0.56, h));
+  ctx.lineTo(s(0.20, w), s(0.73, h));
+  ctx.lineTo(s(0.18, w), s(0.70, h));
+  ctx.lineTo(s(0.46, w), s(0.54, h));
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Wing tips — small flat edge
+  ctx.beginPath();
+  ctx.moveTo(s(0.20, w), s(0.27, h));
+  ctx.lineTo(s(0.18, w), s(0.30, h));
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(s(0.20, w), s(0.73, h));
+  ctx.lineTo(s(0.18, w), s(0.70, h));
+  ctx.stroke();
+}
+
+function drawHStab(ctx, w, h, col) {
+  ctx.strokeStyle = col;
+  ctx.fillStyle = col + "22";
+  ctx.lineWidth = Math.max(1.5, w * 0.004);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  // Top H-stab
+  ctx.beginPath();
+  ctx.moveTo(s(0.18, w), s(0.44, h));
+  ctx.lineTo(s(0.07, w), s(0.36, h));
+  ctx.lineTo(s(0.06, w), s(0.39, h));
+  ctx.lineTo(s(0.14, w), s(0.46, h));
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Bottom H-stab
+  ctx.beginPath();
+  ctx.moveTo(s(0.18, w), s(0.56, h));
+  ctx.lineTo(s(0.07, w), s(0.64, h));
+  ctx.lineTo(s(0.06, w), s(0.61, h));
+  ctx.lineTo(s(0.14, w), s(0.54, h));
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+}
+
+function drawVFin(ctx, w, h, col) {
+  ctx.strokeStyle = col;
+  ctx.fillStyle = col + "22";
+  ctx.lineWidth = Math.max(1.5, w * 0.004);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  ctx.beginPath();
+  ctx.moveTo(s(0.10, w), s(0.425, h));
+  ctx.lineTo(s(0.18, w), s(0.425, h));
+  ctx.lineTo(s(0.20, w), s(0.20, h));
+  ctx.lineTo(s(0.12, w), s(0.26, h));
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Rudder hinge line
+  ctx.beginPath();
+  ctx.setLineDash([3, 3]);
+  ctx.strokeStyle = col;
+  ctx.moveTo(s(0.155, w), s(0.425, h));
+  ctx.lineTo(s(0.165, w), s(0.22, h));
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawCockpit(ctx, w, h, col) {
+  ctx.strokeStyle = col;
+  ctx.lineWidth = Math.max(1.5, w * 0.003);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  // Cockpit bubble
+  ctx.beginPath();
+  ctx.moveTo(s(0.72, w), s(0.425, h));
+  ctx.bezierCurveTo(s(0.74, w), s(0.34, h), s(0.83, w), s(0.34, h), s(0.85, w), s(0.425, h));
+  ctx.stroke();
+
+  // Windows
+  const wins = [
+    [0.74, 0.38, 0.035, 0.05],
+    [0.79, 0.36, 0.035, 0.05],
+    [0.84, 0.38, 0.025, 0.04]
+  ];
+  ctx.fillStyle = col + "33";
+  wins.forEach(([x, y, rw, rh]) => {
+    ctx.beginPath();
+    ctx.ellipse(s(x, w), s(y, h), s(rw, w), s(rh, h), -0.1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  });
+}
+
+function drawEngines(ctx, w, h, col) {
+  ctx.strokeStyle = col;
+  ctx.lineWidth = Math.max(1.5, w * 0.004);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  // Engine 1 (far/top)
+  const e1x = 0.33, e1y = 0.38;
+  ctx.fillStyle = col + "18";
+  ctx.beginPath();
+  ctx.ellipse(s(e1x, w), s(e1y, h), s(0.065, w), s(0.028, h), 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  // intake ring
+  ctx.beginPath();
+  ctx.ellipse(s(e1x + 0.065, w), s(e1y, h), s(0.012, w), s(0.028, h), 0, 0, Math.PI * 2);
+  ctx.stroke();
+  // Pylon
+  ctx.beginPath();
+  ctx.moveTo(s(e1x, w), s(e1y - 0.025, h));
+  ctx.lineTo(s(e1x, w), s(0.44, h));
+  ctx.stroke();
+
+  // Engine 2 (near/bottom)
+  const e2x = 0.33, e2y = 0.62;
+  ctx.beginPath();
+  ctx.ellipse(s(e2x, w), s(e2y, h), s(0.065, w), s(0.028, h), 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(s(e2x + 0.065, w), s(e2y, h), s(0.012, w), s(0.028, h), 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(s(e2x, w), s(e2y + 0.025, h));
+  ctx.lineTo(s(e2x, w), s(0.56, h));
+  ctx.stroke();
+}
+
+function drawGear(ctx, w, h, col) {
+  ctx.strokeStyle = col;
+  ctx.lineWidth = Math.max(1.5, w * 0.004);
+  ctx.lineCap = "round";
+
+  // Main gear legs
+  [[0.38, 0.57], [0.34, 0.57]].forEach(([x, ystart]) => {
+    ctx.beginPath();
+    ctx.moveTo(s(x, w), s(ystart, h));
+    ctx.lineTo(s(x, w), s(0.72, h));
+    ctx.stroke();
+    // wheel
+    ctx.beginPath();
+    ctx.ellipse(s(x, w), s(0.74, h), s(0.018, w), s(0.024, h), 0, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+
+  // Nose gear
+  ctx.beginPath();
+  ctx.moveTo(s(0.78, w), s(0.575, h));
+  ctx.lineTo(s(0.78, w), s(0.68, h));
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(s(0.78, w), s(0.70, h), s(0.013, w), s(0.018, h), 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Nav lights
+  ctx.fillStyle = "#ff0000";
+  ctx.beginPath();
+  ctx.arc(s(0.19, w), s(0.29, h), s(0.007, w), 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#00cc44";
+  ctx.beginPath();
+  ctx.arc(s(0.19, w), s(0.71, h), s(0.007, w), 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(s(0.095, w), s(0.5, h), s(0.006, w), 0, Math.PI * 2);
+  ctx.fill();
+}
+
+/* ─── Draw full airplane up to given step index ─── */
+function drawUpToStep(ctx, w, h, stepIdx) {
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, w, h);
+
+  STEPS.forEach((step, i) => {
+    if (i > stepIdx) return;
+    const isNew = i === stepIdx;
+    step.animate(ctx, w, h, isNew ? step.highlightColor : "#1a1a1a");
+  });
+}
+
+/* ─── Animated draw for current step ─── */
+let animFrame = null;
+
+function animateStep(canvas, stepIdx) {
+  if (animFrame) cancelAnimationFrame(animFrame);
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width, h = canvas.height;
+
+  // Draw previous steps in black
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, w, h);
+  for (let i = 0; i < stepIdx; i++) {
+    STEPS[i].animate(ctx, w, h, "#1a1a1a");
+  }
+
+  // Animate new step with a dashed-line progressive reveal
+  const step = STEPS[stepIdx];
+  const offscreen = document.createElement("canvas");
+  offscreen.width = w; offscreen.height = h;
+  const octx = offscreen.getContext("2d");
+  step.animate(octx, w, h, step.highlightColor);
+  const imgData = octx.getImageData(0, 0, w, h);
+
+  let progress = 0;
+  const totalFrames = 60;
+
+  function tick() {
+    progress++;
+    const ratio = Math.min(progress / totalFrames, 1);
+    // Reveal row by row (top to bottom)
+    const revealY = Math.floor(ratio * h);
+    ctx.putImageData(imgData, 0, 0, 0, 0, w, revealY);
+    if (progress < totalFrames) {
+      animFrame = requestAnimationFrame(tick);
+    }
+  }
+  animFrame = requestAnimationFrame(tick);
+}
+
+/* ═══════════════════════════════════════════════════════
+   TUTORIAL TAB
+═══════════════════════════════════════════════════════ */
+let currentStep = 0;
+const tutCanvas = document.getElementById("tutorial-canvas");
+const tutCtx = tutCanvas.getContext("2d");
+
+function buildDots() {
+  const container = document.getElementById("step-dots");
+  container.innerHTML = "";
+  STEPS.forEach((_, i) => {
+    const d = document.createElement("div");
+    d.className = "dot" + (i < currentStep ? " done" : i === currentStep ? " active" : "");
+    d.addEventListener("click", () => goToStep(i));
+    container.appendChild(d);
+  });
+}
+
+function buildInstructions(step) {
+  const list = document.getElementById("instruction-list");
+  list.innerHTML = step.instructions.map((t, i) =>
+    `<li data-num="${i + 1}">${t}</li>`
+  ).join("");
+  document.getElementById("whiteboard-tip").innerHTML =
+    `<strong>✏ ${step.tip.split(":")[0]}:</strong>${step.tip.split(":").slice(1).join(":")}`;
+}
+
+function goToStep(idx) {
+  currentStep = idx;
+  document.getElementById("step-badge").textContent = `Step ${idx + 1} of ${STEPS.length}`;
+  document.getElementById("step-title").textContent = STEPS[idx].title;
+  document.getElementById("prev-btn").disabled = idx === 0;
+  document.getElementById("next-btn").textContent = idx === STEPS.length - 1 ? "Finish ✓" : "Next →";
+  document.getElementById("next-btn").disabled = false;
+  buildDots();
+  buildInstructions(STEPS[idx]);
+  animateStep(tutCanvas, idx);
+}
+
+document.getElementById("prev-btn").addEventListener("click", () => {
+  if (currentStep > 0) goToStep(currentStep - 1);
+});
+document.getElementById("next-btn").addEventListener("click", () => {
+  if (currentStep < STEPS.length - 1) goToStep(currentStep + 1);
+});
+document.getElementById("replay-btn").addEventListener("click", () => {
+  animateStep(tutCanvas, currentStep);
+});
+
+// Init tutorial
+goToStep(0);
+
+/* ═══════════════════════════════════════════════════════
+   PRACTICE TAB
+═══════════════════════════════════════════════════════ */
+const practiceWrap = document.getElementById("practice-wrap");
+const practiceCanvas = document.getElementById("practice-canvas");
+const ghostCanvas = document.getElementById("ghost-canvas");
+const pCtx = practiceCanvas.getContext("2d");
+const gCtx = ghostCanvas.getContext("2d");
+
+// Draw ghost reference
+drawUpToStep(gCtx, ghostCanvas.width, ghostCanvas.height, STEPS.length - 1);
+// clear ghost alpha so it's very faint
+ghostCanvas.style.opacity = "0.15";
+
+let isDrawing = false;
+let tool = "pen";
+let brushColor = "#1a1a1a";
+let brushSize = 3;
+let lastX = 0, lastY = 0;
+
+function getPos(e, canvas) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const src = e.touches ? e.touches[0] : e;
+  return [(src.clientX - rect.left) * scaleX, (src.clientY - rect.top) * scaleY];
+}
+
+function startDraw(e) {
+  isDrawing = true;
+  [lastX, lastY] = getPos(e, practiceCanvas);
+  // dot for single click
+  pCtx.beginPath();
+  pCtx.arc(lastX, lastY, (tool === "eraser" ? brushSize * 4 : brushSize) / 2, 0, Math.PI * 2);
+  pCtx.fillStyle = tool === "eraser" ? "#fff" : brushColor;
+  pCtx.fill();
+}
+
+function doDraw(e) {
+  if (!isDrawing) return;
+  e.preventDefault();
+  const [cx, cy] = getPos(e, practiceCanvas);
+  pCtx.beginPath();
+  pCtx.moveTo(lastX, lastY);
+  pCtx.lineTo(cx, cy);
+  pCtx.strokeStyle = tool === "eraser" ? "#fff" : brushColor;
+  pCtx.lineWidth = tool === "eraser" ? brushSize * 4 : brushSize;
+  pCtx.lineCap = "round";
+  pCtx.lineJoin = "round";
+  pCtx.stroke();
+  [lastX, lastY] = [cx, cy];
+}
+
+function endDraw() { isDrawing = false; }
+
+// White background init
+pCtx.fillStyle = "#fff";
+pCtx.fillRect(0, 0, practiceCanvas.width, practiceCanvas.height);
+
+practiceCanvas.addEventListener("mousedown", startDraw);
+practiceCanvas.addEventListener("mousemove", doDraw);
+practiceCanvas.addEventListener("mouseup", endDraw);
+practiceCanvas.addEventListener("mouseleave", endDraw);
+practiceCanvas.addEventListener("touchstart", startDraw, { passive: false });
+practiceCanvas.addEventListener("touchmove", doDraw, { passive: false });
+practiceCanvas.addEventListener("touchend", endDraw);
+
+document.getElementById("tool-pen").addEventListener("click", () => {
+  tool = "pen";
+  document.getElementById("tool-pen").classList.add("active");
+  document.getElementById("tool-eraser").classList.remove("active");
+  practiceCanvas.style.cursor = "crosshair";
+});
+document.getElementById("tool-eraser").addEventListener("click", () => {
+  tool = "eraser";
+  document.getElementById("tool-eraser").classList.add("active");
+  document.getElementById("tool-pen").classList.remove("active");
+  practiceCanvas.style.cursor = "cell";
+});
+document.getElementById("brush-size").addEventListener("input", e => {
+  brushSize = parseInt(e.target.value);
+});
+document.querySelectorAll(".color-swatch").forEach(sw => {
+  sw.addEventListener("click", () => {
+    document.querySelectorAll(".color-swatch").forEach(s => s.classList.remove("active"));
+    sw.classList.add("active");
+    brushColor = sw.dataset.color;
+    tool = "pen";
+    document.getElementById("tool-pen").classList.add("active");
+    document.getElementById("tool-eraser").classList.remove("active");
+  });
+});
+
+let ghostVisible = true;
+document.getElementById("toggle-ghost").addEventListener("click", () => {
+  ghostVisible = !ghostVisible;
+  ghostCanvas.style.opacity = ghostVisible ? "0.15" : "0";
+  document.getElementById("toggle-ghost").classList.toggle("active", ghostVisible);
+});
+
+document.getElementById("clear-canvas").addEventListener("click", () => {
+  pCtx.fillStyle = "#fff";
+  pCtx.fillRect(0, 0, practiceCanvas.width, practiceCanvas.height);
+});
+
+/* ═══════════════════════════════════════════════════════
+   REFERENCE TAB
+═══════════════════════════════════════════════════════ */
+const refData = [
+  { label: "Complete Airplane", desc: "Full reference view with all components." },
+  { label: "Fuselage Only", desc: "Start here — the tapered tube that is the airplane body." },
+  { label: "Wings & Stabilizers", desc: "All lifting and control surfaces added." },
+  { label: "With Cockpit & Engines", desc: "Structural detail for teaching systems." },
+];
+const refSteps = [6, 0, 2, 5]; // which step index to draw up to
+
+const grid = document.getElementById("ref-grid");
+refData.forEach((r, i) => {
+  const card = document.createElement("div");
+  card.className = "ref-card";
+  const cv = document.createElement("canvas");
+  cv.width = 400; cv.height = 300;
+  card.appendChild(cv);
+  const lbl = document.createElement("div");
+  lbl.className = "ref-label";
+  lbl.textContent = r.label;
+  card.appendChild(lbl);
+  const desc = document.createElement("div");
+  desc.className = "ref-desc";
+  desc.textContent = r.desc;
+  card.appendChild(desc);
+  grid.appendChild(card);
+  drawUpToStep(cv.getContext("2d"), 400, 300, refSteps[i]);
+});
+
+/* ═══════════════════════════════════════════════════════
+   TAB SWITCHING
+═══════════════════════════════════════════════════════ */
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+  });
+});
+</script>
+</body>
+</html>
